@@ -1,1 +1,1386 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Super Futebol 2D - 3 Fases</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+    }
 
+    body {
+      background: #0f172a;
+      color: #f8fafc;
+      font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      overflow: hidden;
+    }
+
+    #game-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 100%;
+      max-width: 960px;
+      padding: 10px;
+      gap: 10px;
+    }
+
+    /* Placar Superior */
+    #scoreboard {
+      width: 100%;
+      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+      border: 2px solid #334155;
+      border-radius: 12px;
+      padding: 10px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+    }
+
+    .team-box {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 700;
+      font-size: 1.1rem;
+    }
+
+    .team-badge {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      border: 2px solid #fff;
+    }
+
+    .score-num {
+      font-size: 1.8rem;
+      font-weight: 900;
+      background: #020617;
+      padding: 2px 14px;
+      border-radius: 8px;
+      border: 1px solid #334155;
+      color: #fbbf24;
+    }
+
+    .center-info {
+      text-align: center;
+    }
+
+    #stage-title {
+      font-size: 1rem;
+      font-weight: 800;
+      color: #38bdf8;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    #stage-goal {
+      font-size: 0.85rem;
+      color: #cbd5e1;
+      margin-top: 2px;
+    }
+
+    #timer-box {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: #a3e635;
+      margin-top: 2px;
+    }
+
+    /* Container do Canvas */
+    #canvas-container {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 16 / 10;
+      border-radius: 14px;
+      overflow: hidden;
+      border: 4px solid #334155;
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6);
+      background: #15803d;
+    }
+
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    /* Overlays de Menu / Fim de Fase */
+    .overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.88);
+      backdrop-filter: blur(4px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 24px;
+      z-index: 10;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .overlay h1 {
+      font-size: 2.3rem;
+      font-weight: 900;
+      color: #fbbf24;
+      margin-bottom: 10px;
+      text-shadow: 0 3px 10px rgba(0, 0, 0, 0.5);
+    }
+
+    .overlay p {
+      max-width: 520px;
+      font-size: 1rem;
+      color: #e2e8f0;
+      line-height: 1.5;
+      margin-bottom: 20px;
+    }
+
+    .controls-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-bottom: 24px;
+      max-width: 560px;
+      width: 100%;
+    }
+
+    .control-card {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 10px;
+      padding: 10px;
+    }
+
+    .key-badge {
+      display: inline-block;
+      background: #334155;
+      color: #fbbf24;
+      font-weight: 800;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      margin-bottom: 5px;
+    }
+
+    .control-desc {
+      font-size: 0.8rem;
+      color: #cbd5e1;
+    }
+
+    button.btn-primary {
+      background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+      color: #fff;
+      border: none;
+      padding: 14px 32px;
+      font-size: 1.1rem;
+      font-weight: 800;
+      border-radius: 10px;
+      cursor: pointer;
+      box-shadow: 0 6px 15px rgba(34, 197, 94, 0.4);
+      transition: transform 0.15s, filter 0.15s;
+    }
+
+    button.btn-primary:hover {
+      transform: translateY(-2px);
+      filter: brightness(1.1);
+    }
+
+    button.btn-primary:active {
+      transform: translateY(1px);
+    }
+
+    /* Banner rápido de GOL */
+    #goal-banner {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(15, 23, 42, 0.9);
+      border: 3px solid #fbbf24;
+      color: #fbbf24;
+      font-size: 3rem;
+      font-weight: 900;
+      padding: 16px 44px;
+      border-radius: 16px;
+      letter-spacing: 3px;
+      pointer-events: none;
+      z-index: 8;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
+    }
+
+    /* Barra de instrução inferior */
+    #footer-bar {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.85rem;
+      color: #94a3b8;
+      padding: 0 6px;
+    }
+
+    #sound-btn {
+      background: #1e293b;
+      color: #e2e8f0;
+      border: 1px solid #334155;
+      padding: 5px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.85rem;
+    }
+
+    /* Controles Touch (Celular/Tablet) */
+    #touch-controls {
+      display: none;
+      width: 100%;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 6px;
+      padding: 0 10px;
+    }
+
+    @media (pointer: coarse) {
+      #touch-controls {
+        display: flex;
+      }
+    }
+
+    .dpad {
+      display: grid;
+      grid-template-columns: repeat(3, 48px);
+      grid-template-rows: repeat(3, 48px);
+      gap: 4px;
+    }
+
+    .t-btn {
+      background: rgba(30, 41, 59, 0.9);
+      border: 2px solid #475569;
+      color: #fff;
+      border-radius: 10px;
+      font-weight: 800;
+      font-size: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .t-btn:active {
+      background: #38bdf8;
+      color: #0f172a;
+    }
+
+    .action-btns {
+      display: flex;
+      gap: 12px;
+    }
+
+    .action-btn {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      font-weight: 800;
+      font-size: 0.9rem;
+      border: 2px solid #fff;
+      color: #fff;
+    }
+  </style>
+</head>
+<body>
+  <div id="game-wrapper">
+    <!-- Placar -->
+    <div id="scoreboard">
+      <div class="team-box">
+        <span class="team-badge" style="background: #2563eb;"></span>
+        <span>BRASIL (VOCÊ)</span>
+        <span class="score-num" id="player-score">0</span>
+      </div>
+
+      <div class="center-info">
+        <div id="stage-title">FASE 1: AMISTOSO 3v3</div>
+        <div id="stage-goal">Objetivo: Marque 2 gols</div>
+        <div id="timer-box">Tempo: 01:30</div>
+      </div>
+
+      <div class="team-box">
+        <span class="score-num" id="ai-score">0</span>
+        <span id="opponent-name">RIVAIS</span>
+        <span class="team-badge" style="background: #dc2626;"></span>
+      </div>
+    </div>
+
+    <!-- Campo -->
+    <div id="canvas-container">
+      <canvas id="gameCanvas" width="960" height="600"></canvas>
+
+      <div id="goal-banner" class="hidden">GOOOOL!</div>
+
+      <!-- Tela Inicial / Transição de Fase -->
+      <div id="menu-overlay" class="overlay">
+        <h1 id="overlay-title">SUPER FUTEBOL 2D</h1>
+        <p id="overlay-desc">
+          Controle os jogadores do seu time, drible, toque a bola e vença as 3 fases do campeonato!
+        </p>
+
+        <div class="controls-grid">
+          <div class="control-card">
+            <div class="key-badge">WASD / Setas</div>
+            <div class="control-desc">Movimentar jogador ativo (anel amarelo)</div>
+          </div>
+          <div class="control-card">
+            <div class="key-badge">Espaço</div>
+            <div class="control-desc">Segure para força e solte para chutar/passar</div>
+          </div>
+          <div class="control-card">
+            <div class="key-badge">Q ou E</div>
+            <div class="control-desc">Trocar para o jogador mais perto da bola</div>
+          </div>
+        </div>
+
+        <button id="start-btn" class="btn-primary">INICIAR FASE 1</button>
+      </div>
+    </div>
+
+    <!-- Barra inferior -->
+    <div id="footer-bar">
+      <span>Dica: Encoste na bola para conduzir. Use <b>Q</b> ou <b>E</b> para trocar de jogador na defesa!</span>
+      <button id="sound-btn">Som: LIGADO</button>
+    </div>
+
+    <!-- Controles Touch para dispositivos móveis -->
+    <div id="touch-controls">
+      <div class="dpad">
+        <div></div>
+        <button class="t-btn" data-key="ArrowUp">▲</button>
+        <div></div>
+        <button class="t-btn" data-key="ArrowLeft">◀</button>
+        <div></div>
+        <button class="t-btn" data-key="ArrowRight">▶</button>
+        <div></div>
+        <button class="t-btn" data-key="ArrowDown">▼</button>
+        <div></div>
+      </div>
+      <div class="action-btns">
+        <button class="action-btn" id="touch-switch" style="background: #0284c7;">TROCAR</button>
+        <button class="action-btn" id="touch-kick" style="background: #16a34a;">CHUTAR</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    // Elementos de UI
+    const playerScoreEl = document.getElementById('player-score');
+    const aiScoreEl = document.getElementById('ai-score');
+    const stageTitleEl = document.getElementById('stage-title');
+    const stageGoalEl = document.getElementById('stage-goal');
+    const timerBoxEl = document.getElementById('timer-box');
+    const opponentNameEl = document.getElementById('opponent-name');
+    const menuOverlay = document.getElementById('menu-overlay');
+    const overlayTitle = document.getElementById('overlay-title');
+    const overlayDesc = document.getElementById('overlay-desc');
+    const startBtn = document.getElementById('start-btn');
+    const goalBanner = document.getElementById('goal-banner');
+    const soundBtn = document.getElementById('sound-btn');
+
+    // Configuração das 3 Fases
+    const STAGES = [
+      {
+        number: 1,
+        title: 'FASE 1: AMISTOSO 3v3',
+        opponent: 'ESTRELAS FC',
+        teamSize: 3,
+        goalsToWin: 2,
+        duration: 90,
+        aiSpeed: 155,
+        gkSpeed: 145,
+        aiReaction: 0.72,
+        desc: 'Fase 1 (3 contra 3): Adversários em ritmo moderado. Marque 2 gols antes do tempo acabar para avançar!'
+      },
+      {
+        number: 2,
+        title: 'FASE 2: SEMIFINAL 4v4',
+        opponent: 'TITÃS UNITED',
+        teamSize: 4,
+        goalsToWin: 3,
+        duration: 105,
+        aiSpeed: 185,
+        gkSpeed: 180,
+        aiReaction: 0.85,
+        desc: 'Fase 2 (4 contra 4): Marcação mais intensa e goleiro ágil! Marque 3 gols para chegar à Grande Final.'
+      },
+      {
+        number: 3,
+        title: 'FASE 3: GRANDE FINAL 5v5',
+        opponent: 'CAMPEÕES FC',
+        teamSize: 5,
+        goalsToWin: 3,
+        duration: 120,
+        aiSpeed: 212,
+        gkSpeed: 210,
+        aiReaction: 0.96,
+        desc: 'Fase 3 (5 contra 5): Time completo e adversários velozes! Marque 3 gols e levante a taça!'
+      }
+    ];
+
+    // Dimensões do campo dentro do canvas (960x600)
+    const FIELD = {
+      x: 55,
+      y: 40,
+      w: 850,
+      h: 520,
+      goalHeight: 140,
+      goalDepth: 36
+    };
+
+    // Sistema de Áudio Sintetizado (Web Audio API)
+    let soundEnabled = true;
+    let audioCtx = null;
+
+    function initAudio() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+    }
+
+    function playSound(type) {
+      if (!soundEnabled) return;
+      initAudio();
+      const now = audioCtx.currentTime;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+
+      if (type === 'kick') {
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(160, now);
+        osc.frequency.exponentialRampToValueAtTime(45, now + 0.14);
+        gain.gain.setValueAtTime(0.35, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.14);
+        osc.start(now);
+        osc.stop(now + 0.14);
+      } else if (type === 'whistle') {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(2800, now);
+        osc.frequency.setValueAtTime(3100, now + 0.08);
+        osc.frequency.setValueAtTime(2750, now + 0.18);
+        gain.gain.setValueAtTime(0.2, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
+        osc.start(now);
+        osc.stop(now + 0.35);
+      } else if (type === 'goal') {
+        const notes = [523.25, 659.25, 783.99, 1046.5];
+        notes.forEach((freq, idx) => {
+          const o = audioCtx.createOscillator();
+          const g = audioCtx.createGain();
+          o.type = 'square';
+          o.frequency.setValueAtTime(freq, now + idx * 0.11);
+          g.gain.setValueAtTime(0.15, now + idx * 0.11);
+          g.gain.exponentialRampToValueAtTime(0.01, now + idx * 0.11 + 0.25);
+          o.connect(g);
+          g.connect(audioCtx.destination);
+          o.start(now + idx * 0.11);
+          o.stop(now + idx * 0.11 + 0.25);
+        });
+      }
+    }
+
+    soundBtn.addEventListener('click', () => {
+      soundEnabled = !soundEnabled;
+      soundBtn.textContent = `Som: ${soundEnabled ? 'LIGADO' : 'DESLIGADO'}`;
+    });
+
+    // Estado Global do Jogo
+    let currentStageIdx = 0;
+    let gameState = 'MENU'; // MENU, PLAYING, GOAL_PAUSE, STAGE_CLEAR, GAME_OVER, CHAMPION
+    let playerScore = 0;
+    let aiScore = 0;
+    let timeLeft = 90;
+    let lastTimestamp = 0;
+    let goalPauseTimer = 0;
+
+    // Entidades
+    let players = [];
+    let selectedPlayerId = null;
+    const ball = {
+      x: canvas.width / 2,
+      y: canvas.height / 2,
+      vx: 0,
+      vy: 0,
+      radius: 10,
+      ownerId: null,
+      kickCooldown: 0
+    };
+
+    // Controles de Teclado e Carga de Chute
+    const keys = {};
+    let chargingKick = false;
+    let kickCharge = 0; // 0 a 1
+
+    window.addEventListener('keydown', (e) => {
+      keys[e.code] = true;
+
+      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) {
+        e.preventDefault();
+      }
+
+      if (gameState !== 'PLAYING') return;
+
+      if (e.code === 'KeyQ' || e.code === 'KeyE') {
+        switchToNearestPlayer();
+      }
+
+      if (e.code === 'Space' && !chargingKick) {
+        chargingKick = true;
+        kickCharge = 0.25;
+      }
+    });
+
+    window.addEventListener('keyup', (e) => {
+      keys[e.code] = false;
+
+      if (e.code === 'Space' && chargingKick) {
+        if (gameState === 'PLAYING') {
+          executePlayerAction(kickCharge);
+        }
+        chargingKick = false;
+        kickCharge = 0;
+      }
+    });
+
+    // Suporte Touch
+    document.querySelectorAll('.t-btn').forEach((btn) => {
+      const code = btn.dataset.key;
+      btn.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        keys[code] = true;
+      });
+      btn.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        keys[code] = false;
+      });
+    });
+
+    document.getElementById('touch-switch').addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      if (gameState === 'PLAYING') switchToNearestPlayer();
+    });
+
+    const touchKickBtn = document.getElementById('touch-kick');
+    touchKickBtn.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      if (gameState === 'PLAYING') {
+        chargingKick = true;
+        kickCharge = 0.35;
+      }
+    });
+    touchKickBtn.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      if (gameState === 'PLAYING' && chargingKick) {
+        executePlayerAction(kickCharge);
+      }
+      chargingKick = false;
+      kickCharge = 0;
+    });
+
+    // Formação dos times por fase
+    function createTeams(stage) {
+      players = [];
+      const cx = canvas.width / 2;
+      const cy = canvas.height / 2;
+
+      const blueFormations = {
+        3: [
+          { role: 'GK', x: FIELD.x + 35, y: cy, num: 1 },
+          { role: 'DEF', x: cx - 190, y: cy, num: 4 },
+          { role: 'FWD', x: cx - 65, y: cy, num: 10 }
+        ],
+        4: [
+          { role: 'GK', x: FIELD.x + 35, y: cy, num: 1 },
+          { role: 'DEF', x: cx - 210, y: cy, num: 3 },
+          { role: 'MID', x: cx - 110, y: cy - 110, num: 8 },
+          { role: 'FWD', x: cx - 70, y: cy + 95, num: 10 }
+        ],
+        5: [
+          { role: 'GK', x: FIELD.x + 35, y: cy, num: 1 },
+          { role: 'DEF', x: cx - 220, y: cy - 90, num: 3 },
+          { role: 'DEF', x: cx - 220, y: cy + 90, num: 4 },
+          { role: 'MID', x: cx - 115, y: cy, num: 8 },
+          { role: 'FWD', x: cx - 60, y: cy, num: 10 }
+        ]
+      };
+
+      const redFormations = {
+        3: [
+          { role: 'GK', x: FIELD.x + FIELD.w - 35, y: cy, num: 1 },
+          { role: 'DEF', x: cx + 190, y: cy, num: 5 },
+          { role: 'FWD', x: cx + 80, y: cy, num: 9 }
+        ],
+        4: [
+          { role: 'GK', x: FIELD.x + FIELD.w - 35, y: cy, num: 1 },
+          { role: 'DEF', x: cx + 210, y: cy, num: 5 },
+          { role: 'MID', x: cx + 120, y: cy + 110, num: 7 },
+          { role: 'FWD', x: cx + 80, y: cy - 95, num: 9 }
+        ],
+        5: [
+          { role: 'GK', x: FIELD.x + FIELD.w - 35, y: cy, num: 1 },
+          { role: 'DEF', x: cx + 220, y: cy - 90, num: 2 },
+          { role: 'DEF', x: cx + 220, y: cy + 90, num: 5 },
+          { role: 'MID', x: cx + 125, y: cy, num: 7 },
+          { role: 'FWD', x: cx + 75, y: cy, num: 9 }
+        ]
+      };
+
+      const bList = blueFormations[stage.teamSize];
+      const rList = redFormations[stage.teamSize];
+
+      bList.forEach((p, i) => {
+        players.push({
+          id: `blue_${i}`,
+          team: 'blue',
+          role: p.role,
+          num: p.num,
+          x: p.x,
+          y: p.y,
+          homeX: p.x,
+          homeY: p.y,
+          vx: 0,
+          vy: 0,
+          facingX: 1,
+          facingY: 0,
+          radius: 16,
+          speed: p.role === 'GK' ? 185 : 225,
+          stealCooldown: 0
+        });
+      });
+
+      rList.forEach((p, i) => {
+        players.push({
+          id: `red_${i}`,
+          team: 'red',
+          role: p.role,
+          num: p.num,
+          x: p.x,
+          y: p.y,
+          homeX: p.x,
+          homeY: p.y,
+          vx: 0,
+          vy: 0,
+          facingX: -1,
+          facingY: 0,
+          radius: 16,
+          speed: p.role === 'GK' ? stage.gkSpeed : stage.aiSpeed,
+          stealCooldown: 0,
+          thinkTimer: Math.random() * 0.2
+        });
+      });
+
+      // Seleciona o atacante principal inicialmente
+      const striker = players.find((p) => p.team === 'blue' && p.role === 'FWD') || players[players.length - 1];
+      selectedPlayerId = striker.id;
+    }
+
+    function resetPositionsAfterGoal(scoringTeam) {
+      const stage = STAGES[currentStageIdx];
+      createTeams(stage);
+
+      ball.x = canvas.width / 2;
+      ball.y = canvas.height / 2;
+      ball.vx = 0;
+      ball.vy = 0;
+      ball.ownerId = null;
+      ball.kickCooldown = 0.2;
+
+      // Dá leve vantagem inicial para quem sofreu o gol
+      if (scoringTeam === 'red') {
+        const fwd = players.find((p) => p.team === 'blue' && p.role === 'FWD');
+        if (fwd) {
+          fwd.x = ball.x - 24;
+          selectedPlayerId = fwd.id;
+        }
+      } else if (scoringTeam === 'blue') {
+        const fwdRed = players.find((p) => p.team === 'red' && p.role === 'FWD');
+        if (fwdRed) fwdRed.x = ball.x + 24;
+      }
+    }
+
+    function startStage(stageIndex) {
+      currentStageIdx = stageIndex;
+      const stage = STAGES[currentStageIdx];
+
+      playerScore = 0;
+      aiScore = 0;
+      timeLeft = stage.duration;
+      chargingKick = false;
+      kickCharge = 0;
+
+      stageTitleEl.textContent = stage.title;
+      stageGoalEl.textContent = `Objetivo: Marque ${stage.goalsToWin} gols`;
+      opponentNameEl.textContent = stage.opponent;
+      updateScoreboardUI();
+
+      resetPositionsAfterGoal(null);
+      menuOverlay.classList.add('hidden');
+      goalBanner.classList.add('hidden');
+      gameState = 'PLAYING';
+      playSound('whistle');
+    }
+
+    startBtn.addEventListener('click', () => {
+      initAudio();
+      if (gameState === 'STAGE_CLEAR') {
+        startStage(currentStageIdx + 1);
+      } else if (gameState === 'GAME_OVER' || gameState === 'CHAMPION') {
+        startStage(0);
+      } else {
+        startStage(currentStageIdx);
+      }
+    });
+
+    function updateScoreboardUI() {
+      playerScoreEl.textContent = playerScore;
+      aiScoreEl.textContent = aiScore;
+      const mins = Math.floor(Math.max(0, timeLeft) / 60);
+      const secs = Math.floor(Math.max(0, timeLeft) % 60);
+      timerBoxEl.textContent = `Tempo: ${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+    }
+
+    function switchToNearestPlayer() {
+      let best = null;
+      let minDist = Infinity;
+
+      players.forEach((p) => {
+        if (p.team !== 'blue' || p.role === 'GK') return;
+        const d = Math.hypot(p.x - ball.x, p.y - ball.y);
+        if (d < minDist) {
+          minDist = d;
+          best = p;
+        }
+      });
+
+      if (best) {
+        selectedPlayerId = best.id;
+      }
+    }
+
+    function executePlayerAction(charge) {
+      const active = players.find((p) => p.id === selectedPlayerId);
+      if (!active) return;
+
+      const distToBall = Math.hypot(ball.x - active.x, ball.y - active.y);
+
+      // Se o jogador estiver com a bola ou muito próximo, chuta ou passa
+      if (ball.ownerId === active.id || distToBall <= active.radius + ball.radius + 16) {
+        let dirX = active.facingX;
+        let dirY = active.facingY;
+
+        // Se for toque curto (charge baixo < 0.55), tenta assistência para companheiro na direção olhada
+        if (charge < 0.55) {
+          let bestMate = null;
+          let bestScore = -Infinity;
+
+          players.forEach((mate) => {
+            if (mate.team !== 'blue' || mate.id === active.id) return;
+            const dx = mate.x - active.x;
+            const dy = mate.y - active.y;
+            const dist = Math.hypot(dx, dy);
+            if (dist < 40 || dist > 480) return;
+
+            const nx = dx / dist;
+            const ny = dy / dist;
+            const alignment = nx * dirX + ny * dirY;
+            if (alignment > 0.35 && alignment > bestScore) {
+              bestScore = alignment;
+              bestMate = mate;
+            }
+          });
+
+          if (bestMate) {
+            const dx = bestMate.x - ball.x;
+            const dy = bestMate.y - ball.y;
+            const d = Math.hypot(dx, dy);
+            dirX = dx / d;
+            dirY = dy / d;
+          }
+        }
+
+        const power = 380 + charge * 460;
+        ball.ownerId = null;
+        ball.vx = dirX * power;
+        ball.vy = dirY * power;
+        ball.kickCooldown = 0.22;
+        active.stealCooldown = 0.25;
+        playSound('kick');
+      } else {
+        // Carrinho / avanço rápido na defesa se estiver sem a bola
+        if (active.stealCooldown <= 0) {
+          active.x += active.facingX * 26;
+          active.y += active.facingY * 26;
+          active.stealCooldown = 0.6;
+        }
+      }
+    }
+
+    // Atualização da Física e IA
+    function update(dt) {
+      if (gameState === 'GOAL_PAUSE') {
+        goalPauseTimer -= dt;
+        if (goalPauseTimer <= 0) {
+          goalBanner.classList.add('hidden');
+          const stage = STAGES[currentStageIdx];
+          if (playerScore >= stage.goalsToWin) {
+            handleStageVictory();
+          } else {
+            resetPositionsAfterGoal(lastScorer);
+            gameState = 'PLAYING';
+            playSound('whistle');
+          }
+        }
+        return;
+      }
+
+      if (gameState !== 'PLAYING') return;
+
+      // Cronômetro
+      timeLeft -= dt;
+      if (timeLeft <= 0) {
+        timeLeft = 0;
+        updateScoreboardUI();
+        handleTimeUp();
+        return;
+      }
+      updateScoreboardUI();
+
+      // Carregamento da força do chute
+      if (chargingKick) {
+        kickCharge = Math.min(1, kickCharge + dt * 1.45);
+      }
+
+      const stage = STAGES[currentStageIdx];
+
+      // Se um companheiro azul pegar a bola automaticamente, troca controle para ele
+      if (ball.ownerId && ball.ownerId.startsWith('blue_')) {
+        const owner = players.find((p) => p.id === ball.ownerId);
+        if (owner && owner.role !== 'GK') {
+          selectedPlayerId = owner.id;
+        }
+      }
+
+      // 1. Movimentação dos Jogadores
+      players.forEach((p) => {
+        if (p.stealCooldown > 0) p.stealCooldown -= dt;
+
+        let moveX = 0;
+        let moveY = 0;
+
+        if (p.id === selectedPlayerId) {
+          // Controle Manual do Usuário
+          if (keys['ArrowUp'] || keys['KeyW']) moveY -= 1;
+          if (keys['ArrowDown'] || keys['KeyS']) moveY += 1;
+          if (keys['ArrowLeft'] || keys['KeyA']) moveX -= 1;
+          if (keys['ArrowRight'] || keys['KeyD']) moveX += 1;
+        } else if (p.team === 'blue') {
+          // IA dos Companheiros do Jogador
+          const aiMove = computeTeammateAI(p);
+          moveX = aiMove.x;
+          moveY = aiMove.y;
+        } else {
+          // IA do Time Adversário (Vermelho)
+          const enemyMove = computeOpponentAI(p, stage, dt);
+          moveX = enemyMove.x;
+          moveY = enemyMove.y;
+        }
+
+        const len = Math.hypot(moveX, moveY);
+        if (len > 0.01) {
+          moveX /= len;
+          moveY /= len;
+          p.vx = moveX * p.speed;
+          p.vy = moveY * p.speed;
+          p.facingX = moveX;
+          p.facingY = moveY;
+        } else {
+          p.vx = 0;
+          p.vy = 0;
+        }
+
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+
+        // Mantém jogadores dentro dos limites do campo
+        p.x = Math.max(FIELD.x + p.radius, Math.min(FIELD.x + FIELD.w - p.radius, p.x));
+        p.y = Math.max(FIELD.y + p.radius, Math.min(FIELD.y + FIELD.h - p.radius, p.y));
+      });
+
+      // Evita sobreposição entre jogadores
+      for (let i = 0; i < players.length; i++) {
+        for (let j = i + 1; j < players.length; j++) {
+          const a = players[i];
+          const b = players[j];
+          const dx = b.x - a.x;
+          const dy = b.y - a.y;
+          const dist = Math.hypot(dx, dy);
+          const minDist = a.radius + b.radius;
+          if (dist > 0 && dist < minDist) {
+            const overlap = (minDist - dist) * 0.5;
+            const nx = dx / dist;
+            const ny = dy / dist;
+            a.x -= nx * overlap;
+            a.y -= ny * overlap;
+            b.x += nx * overlap;
+            b.y += ny * overlap;
+          }
+        }
+      }
+
+      // 2. Física da Bola e Posse
+      if (ball.kickCooldown > 0) ball.kickCooldown -= dt;
+
+      if (ball.ownerId) {
+        const owner = players.find((p) => p.id === ball.ownerId);
+        if (owner) {
+          // Condução da bola colada nos pés
+          const targetX = owner.x + owner.facingX * (owner.radius + ball.radius - 2);
+          const targetY = owner.y + owner.facingY * (owner.radius + ball.radius - 2);
+          ball.x += (targetX - ball.x) * 0.45;
+          ball.y += (targetY - ball.y) * 0.45;
+          ball.vx = owner.vx;
+          ball.vy = owner.vy;
+
+          // Goleiro repõe a bola rapidamente após defender
+          if (owner.role === 'GK') {
+            owner.gkHoldTimer = (owner.gkHoldTimer || 0) + dt;
+            if (owner.gkHoldTimer > 0.65) {
+              owner.gkHoldTimer = 0;
+              const dir = owner.team === 'blue' ? 1 : -1;
+              const spreadY = (Math.random() - 0.5) * 0.6;
+              ball.ownerId = null;
+              ball.vx = dir * 520;
+              ball.vy = spreadY * 320;
+              ball.kickCooldown = 0.25;
+              playSound('kick');
+            }
+          }
+        } else {
+          ball.ownerId = null;
+        }
+      } else {
+        // Bola livre em movimento
+        ball.x += ball.vx * dt;
+        ball.y += ball.vy * dt;
+
+        // Atrito da grama
+        const friction = Math.pow(0.28, dt);
+        ball.vx *= friction;
+        ball.vy *= friction;
+
+        if (Math.hypot(ball.vx, ball.vy) < 8) {
+          ball.vx = 0;
+          ball.vy = 0;
+        }
+      }
+
+      // Verifica contato de jogadores com a bola (domínio ou roubada de bola)
+      if (ball.kickCooldown <= 0) {
+        players.forEach((p) => {
+          if (p.stealCooldown > 0) return;
+          const dist = Math.hypot(ball.x - p.x, ball.y - p.y);
+          if (dist <= p.radius + ball.radius + 3) {
+            if (!ball.ownerId) {
+              // Bola livre: jogador domina
+              const ballSpeed = Math.hypot(ball.vx, ball.vy);
+              // Se o chute for muito forte e o jogador não for goleiro, rebate parcialmente
+              if (ballSpeed > 680 && p.role !== 'GK') {
+                ball.vx *= -0.35;
+                ball.vy *= -0.35;
+                ball.ownerId = p.id;
+              } else {
+                ball.ownerId = p.id;
+                if (p.role === 'GK') p.gkHoldTimer = 0;
+              }
+            } else if (ball.ownerId !== p.id) {
+              const currentOwner = players.find((o) => o.id === ball.ownerId);
+              if (currentOwner && currentOwner.team !== p.team && currentOwner.role !== 'GK') {
+                // Disputa de bola entre times adversários
+                if (Math.random() < 0.22) {
+                  currentOwner.stealCooldown = 0.55;
+                  ball.ownerId = p.id;
+                }
+              }
+            }
+          }
+        });
+      }
+
+      // 3. Verificação de Gols e Paredes do Campo
+      const goalTop = FIELD.y + (FIELD.h - FIELD.goalHeight) / 2;
+      const goalBottom = goalTop + FIELD.goalHeight;
+
+      // Gol na esquerda (Gol do Adversário Vermelho)
+      if (ball.x - ball.radius <= FIELD.x) {
+        if (ball.y > goalTop && ball.y < goalBottom) {
+          registerGoal('red');
+          return;
+        } else {
+          ball.x = FIELD.x + ball.radius;
+          ball.vx = Math.abs(ball.vx) * 0.75;
+        }
+      }
+
+      // Gol na direita (Gol do Jogador Azul)
+      if (ball.x + ball.radius >= FIELD.x + FIELD.w) {
+        if (ball.y > goalTop && ball.y < goalBottom) {
+          registerGoal('blue');
+          return;
+        } else {
+          ball.x = FIELD.x + FIELD.w - ball.radius;
+          ball.vx = -Math.abs(ball.vx) * 0.75;
+        }
+      }
+
+      // Linhas laterais superior e inferior
+      if (ball.y - ball.radius <= FIELD.y) {
+        ball.y = FIELD.y + ball.radius;
+        ball.vy = Math.abs(ball.vy) * 0.75;
+      }
+      if (ball.y + ball.radius >= FIELD.y + FIELD.h) {
+        ball.y = FIELD.y + FIELD.h - ball.radius;
+        ball.vy = -Math.abs(ball.vy) * 0.75;
+      }
+    }
+
+    function computeTeammateAI(p) {
+      const cy = FIELD.y + FIELD.h / 2;
+      if (p.role === 'GK') {
+        const targetX = FIELD.x + 28;
+        const targetY = Math.max(cy - 58, Math.min(cy + 58, ball.y));
+        const dx = targetX - p.x;
+        const dy = targetY - p.y;
+        return Math.hypot(dx, dy) > 4 ? { x: dx, y: dy } : { x: 0, y: 0 };
+      }
+
+      // Posicionamento dinâmico apoiando o ataque ou recompondo a defesa
+      const ballProgress = (ball.x - FIELD.x) / FIELD.w; // 0 (defesa) a 1 (ataque)
+      let targetX = p.homeX + (ballProgress - 0.5) * 260;
+      let targetY = p.homeY + (ball.y - cy) * 0.35;
+
+      targetX = Math.max(FIELD.x + 80, Math.min(FIELD.x + FIELD.w - 80, targetX));
+      targetY = Math.max(FIELD.y + 40, Math.min(FIELD.y + FIELD.h - 40, targetY));
+
+      const dx = targetX - p.x;
+      const dy = targetY - p.y;
+      return Math.hypot(dx, dy) > 10 ? { x: dx, y: dy } : { x: 0, y: 0 };
+    }
+
+    function computeOpponentAI(p, stage, dt) {
+      const cy = FIELD.y + FIELD.h / 2;
+
+      // Goleiro adversário
+      if (p.role === 'GK') {
+        const targetX = FIELD.x + FIELD.w - 28;
+        const targetY = Math.max(cy - 60, Math.min(cy + 60, ball.y));
+        const dx = targetX - p.x;
+        const dy = targetY - p.y;
+        return Math.hypot(dx, dy) > 4 ? { x: dx, y: dy } : { x: 0, y: 0 };
+      }
+
+      // Se este adversário estiver com a bola
+      if (ball.ownerId === p.id) {
+        const goalX = FIELD.x;
+        const goalY = cy + Math.sin(performance.now() * 0.003) * 42;
+        const distToGoal = Math.hypot(goalX - p.x, goalY - p.y);
+
+        // Chuta ao gol se estiver em boa distância de finalização
+        if (distToGoal < 275 && Math.random() < 0.06 * stage.aiReaction) {
+          const dx = goalX - ball.x;
+          const dy = goalY - ball.y;
+          const d = Math.hypot(dx, dy);
+          ball.ownerId = null;
+          ball.vx = (dx / d) * (540 + stage.number * 45);
+          ball.vy = (dy / d) * (540 + stage.number * 45);
+          ball.kickCooldown = 0.25;
+          p.stealCooldown = 0.3;
+          playSound('kick');
+          return { x: 0, y: 0 };
+        }
+
+        return { x: goalX - p.x, y: goalY - p.y };
+      }
+
+      // Verifica se este jogador é o adversário de linha mais próximo da bola
+      let nearestRed = null;
+      let minDist = Infinity;
+      players.forEach((other) => {
+        if (other.team !== 'red' || other.role === 'GK') return;
+        const d = Math.hypot(other.x - ball.x, other.y - ball.y);
+        if (d < minDist) {
+          minDist = d;
+          nearestRed = other;
+        }
+      });
+
+      if (nearestRed && nearestRed.id === p.id) {
+        return { x: ball.x - p.x, y: ball.y - p.y };
+      }
+
+      // Demais jogadores marcam zona
+      const ballProgress = (ball.x - FIELD.x) / FIELD.w;
+      let targetX = p.homeX + (ballProgress - 0.5) * 240;
+      let targetY = p.homeY + (ball.y - cy) * 0.4;
+
+      targetX = Math.max(FIELD.x + 80, Math.min(FIELD.x + FIELD.w - 80, targetX));
+      targetY = Math.max(FIELD.y + 40, Math.min(FIELD.y + FIELD.h - 40, targetY));
+
+      const dx = targetX - p.x;
+      const dy = targetY - p.y;
+      return Math.hypot(dx, dy) > 10 ? { x: dx, y: dy } : { x: 0, y: 0 };
+    }
+
+    let lastScorer = null;
+    function registerGoal(team) {
+      lastScorer = team;
+      playSound('goal');
+
+      if (team === 'blue') {
+        playerScore++;
+        goalBanner.textContent = 'GOOOOL DO BRASIL!';
+        goalBanner.style.color = '#fbbf24';
+        goalBanner.style.borderColor = '#fbbf24';
+      } else {
+        aiScore++;
+        goalBanner.textContent = 'GOL DO ADVERSÁRIO!';
+        goalBanner.style.color = '#f87171';
+        goalBanner.style.borderColor = '#f87171';
+      }
+
+      updateScoreboardUI();
+      goalBanner.classList.remove('hidden');
+      gameState = 'GOAL_PAUSE';
+      goalPauseTimer = 1.6;
+    }
+
+    function handleStageVictory() {
+      playSound('whistle');
+      if (currentStageIdx < STAGES.length - 1) {
+        const nextStage = STAGES[currentStageIdx + 1];
+        gameState = 'STAGE_CLEAR';
+        overlayTitle.textContent = `VITÓRIA NA FASE ${currentStageIdx + 1}!`;
+        overlayDesc.textContent = `Placar final: Brasil ${playerScore} x ${aiScore} ${STAGES[currentStageIdx].opponent}. Prepare-se para a ${nextStage.title}! (${nextStage.desc})`;
+        startBtn.textContent = `IR PARA A FASE ${currentStageIdx + 2}`;
+        menuOverlay.classList.remove('hidden');
+      } else {
+        gameState = 'CHAMPION';
+        overlayTitle.textContent = 'CAMPEÃO DO TORNEIO!';
+        overlayDesc.textContent = `Parabéns! Você venceu as 3 fases e derrotou ${STAGES[2].opponent} por ${playerScore} x ${aiScore} na Grande Final!`;
+        startBtn.textContent = 'JOGAR NOVAMENTE';
+        menuOverlay.classList.remove('hidden');
+      }
+    }
+
+    function handleTimeUp() {
+      playSound('whistle');
+      const stage = STAGES[currentStageIdx];
+      if (playerScore > aiScore) {
+        handleStageVictory();
+      } else {
+        gameState = 'GAME_OVER';
+        overlayTitle.textContent = 'FIM DE TEMPO!';
+        overlayDesc.textContent = `Placar: Brasil ${playerScore} x ${aiScore} ${stage.opponent}. Você precisava vencer para avançar de fase.`;
+        startBtn.textContent = 'TENTAR NOVAMENTE';
+        menuOverlay.classList.remove('hidden');
+      }
+    }
+
+    // Renderização do Campo, Jogadores e Bola
+    function draw() {
+      // Gramado externo
+      ctx.fillStyle = '#14532d';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Faixas alternadas da grama do campo
+      const stripeCount = 10;
+      const stripeW = FIELD.w / stripeCount;
+      for (let i = 0; i < stripeCount; i++) {
+        ctx.fillStyle = i % 2 === 0 ? '#16a34a' : '#15803d';
+        ctx.fillRect(FIELD.x + i * stripeW, FIELD.y, stripeW, FIELD.h);
+      }
+
+      // Linhas do campo
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
+      ctx.lineWidth = 3;
+
+      // Borda externa
+      ctx.strokeRect(FIELD.x, FIELD.y, FIELD.w, FIELD.h);
+
+      // Linha de meio de campo e círculo central
+      const cx = FIELD.x + FIELD.w / 2;
+      const cy = FIELD.y + FIELD.h / 2;
+      ctx.beginPath();
+      ctx.moveTo(cx, FIELD.y);
+      ctx.lineTo(cx, FIELD.y + FIELD.h);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(cx, cy, 68, 0, Math.PI * 2);
+      ctx.stroke();
+
+      ctx.fillStyle = '#fff';
+      ctx.beginPath();
+      ctx.arc(cx, cy, 4, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Grandes áreas
+      const boxW = 115;
+      const boxH = 260;
+      ctx.strokeRect(FIELD.x, cy - boxH / 2, boxW, boxH);
+      ctx.strokeRect(FIELD.x + FIELD.w - boxW, cy - boxH / 2, boxW, boxH);
+
+      // Pequenas áreas
+      const smallBoxW = 45;
+      const smallBoxH = 150;
+      ctx.strokeRect(FIELD.x, cy - smallBoxH / 2, smallBoxW, smallBoxH);
+      ctx.strokeRect(FIELD.x + FIELD.w - smallBoxW, cy - smallBoxH / 2, smallBoxW, smallBoxH);
+
+      // Traves e Redes
+      const goalTop = cy - FIELD.goalHeight / 2;
+      drawGoalNet(FIELD.x - FIELD.goalDepth, goalTop, FIELD.goalDepth, FIELD.goalHeight);
+      drawGoalNet(FIELD.x + FIELD.w, goalTop, FIELD.goalDepth, FIELD.goalHeight);
+
+      // Jogadores
+      players.forEach((p) => {
+        const isSelected = p.id === selectedPlayerId;
+
+        // Sombra
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.28)';
+        ctx.beginPath();
+        ctx.ellipse(p.x, p.y + p.radius - 2, p.radius, p.radius * 0.55, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Anel de seleção para o jogador controlado
+        if (isSelected) {
+          ctx.strokeStyle = '#facc15';
+          ctx.lineWidth = 3.5;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.radius + 6, 0, Math.PI * 2);
+          ctx.stroke();
+
+          // Barra de força de chute acima do jogador
+          if (chargingKick) {
+            const barW = 40;
+            const barH = 6;
+            ctx.fillStyle = '#0f172a';
+            ctx.fillRect(p.x - barW / 2, p.y - p.radius - 16, barW, barH);
+            ctx.fillStyle = kickCharge > 0.7 ? '#ef4444' : '#facc15';
+            ctx.fillRect(p.x - barW / 2, p.y - p.radius - 16, barW * kickCharge, barH);
+          }
+        }
+
+        // Corpo do jogador
+        ctx.fillStyle = p.team === 'blue' ? (p.role === 'GK' ? '#0ea5e9' : '#1d4ed8') : (p.role === 'GK' ? '#f97316' : '#dc2626');
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // Indicador de direção
+        ctx.fillStyle = '#fbbf24';
+        ctx.beginPath();
+        ctx.arc(p.x + p.facingX * (p.radius - 4), p.y + p.facingY * (p.radius - 4), 3, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Número da camisa
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 12px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(p.num, p.x, p.y);
+      });
+
+      // Bola
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
+      ctx.beginPath();
+      ctx.ellipse(ball.x + 2, ball.y + 4, ball.radius, ball.radius * 0.7, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = '#0f172a';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // Gomo central da bola
+      ctx.fillStyle = '#0f172a';
+      ctx.beginPath();
+      ctx.arc(ball.x, ball.y, 3.8, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    function drawGoalNet(x, y, w, h) {
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.16)';
+      ctx.fillRect(x, y, w, h);
+
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+      ctx.lineWidth = 1;
+      for (let gx = x; gx <= x + w; gx += 9) {
+        ctx.beginPath();
+        ctx.moveTo(gx, y);
+        ctx.lineTo(gx, y + h);
+        ctx.stroke();
+      }
+      for (let gy = y; gy <= y + h; gy += 9) {
+        ctx.beginPath();
+        ctx.moveTo(x, gy);
+        ctx.lineTo(x + w, gy);
+        ctx.stroke();
+      }
+
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 4;
+      ctx.strokeRect(x, y, w, h);
+    }
+
+    // Loop Principal
+    function gameLoop(timestamp) {
+      if (!lastTimestamp) lastTimestamp = timestamp;
+      const dt = Math.min(0.05, (timestamp - lastTimestamp) / 1000);
+      lastTimestamp = timestamp;
+
+      update(dt);
+      draw();
+
+      requestAnimationFrame(gameLoop);
+    }
+
+    // Prepara tela inicial
+    createTeams(STAGES[0]);
+    requestAnimationFrame(gameLoop);
+  </script>
+</body>
+</html>
